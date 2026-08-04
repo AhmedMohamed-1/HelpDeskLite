@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { db, getTicketById, getUsers, updateTicket } from "@/lib/firebase";
 import { useRoles, useSession } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,56 +49,34 @@ function TicketDetail() {
 
   const ticket = useQuery({
     queryKey: ["ticket", ticketId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tickets")
-        .select("*")
-        .eq("id", ticketId)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
+    queryFn: async () => getTicketById(ticketId),
   });
 
   const staffMembers = useQuery({
     queryKey: ["staff-members"],
     enabled: staff,
     queryFn: async () => {
-      const { data: roleRows, error } = await supabase
-        .from("user_roles")
-        .select("user_id, role")
-        .in("role", ["support", "manager"]);
-      if (error) throw error;
-      const ids = [...new Set((roleRows ?? []).map((r) => r.user_id))];
-      if (ids.length === 0) return [];
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .in("id", ids);
-      return profs ?? [];
+      const users = await getUsers();
+      return users.filter((u) => Array.isArray(u.roles) && u.roles.some((r: string) => r === "support" || r === "manager"));
     },
   });
 
   const people = useQuery({
     queryKey: ["profiles"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("id, full_name, email");
-      if (error) throw error;
-      return data;
-    },
+    queryFn: async () => getUsers(),
   });
 
   type TicketPatch = { status?: TicketStatus; assignee_id?: string | null };
 
   async function update(patch: TicketPatch, message: string) {
-    const { error } = await supabase.from("tickets").update(patch).eq("id", ticketId);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      await updateTicket(ticketId, patch);
+      toast.success(message);
+      queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] });
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+    } catch (error: any) {
+      toast.error(error.message ?? "Unable to update ticket");
     }
-    toast.success(message);
-    queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] });
-    queryClient.invalidateQueries({ queryKey: ["tickets"] });
   }
 
   if (ticket.isLoading) return <p className="text-sm text-muted-foreground">Loading ticket…</p>;

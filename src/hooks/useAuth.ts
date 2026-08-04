@@ -1,25 +1,26 @@
 import { useEffect, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { doc, getDoc } from "firebase/firestore";
+import { auth as firebaseAuth, db } from "@/lib/firebase";
 import type { Role } from "@/lib/helpdesk";
 
 export function useSession() {
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<{ id: string; email?: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s);
+    const unsubscribe = firebaseAuth.onAuthStateChanged((firebaseUser) => {
+      if (firebaseUser) {
+        setUser({ id: firebaseUser.uid, email: firebaseUser.email });
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
-    return () => sub.subscription.unsubscribe();
+
+    return () => unsubscribe();
   }, []);
 
-  return { session, loading, user: session?.user ?? null };
+  return { session: user ? { user: { id: user.id, email: user.email ?? undefined } } : null, loading, user };
 }
 
 export function useRoles(userId?: string) {
@@ -33,16 +34,23 @@ export function useRoles(userId?: string) {
       setLoading(false);
       return;
     }
+
     setLoading(true);
-    supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .then(({ data }) => {
+    const userRef = doc(db, "users", userId);
+    getDoc(userRef)
+      .then((snapshot) => {
         if (!active) return;
-        setRoles((data ?? []).map((r) => r.role as Role));
+        const data = snapshot.exists() ? snapshot.data() : null;
+        const nextRoles = Array.isArray(data?.roles) ? (data.roles as Role[]) : (["employee"] as Role[]);
+        setRoles(nextRoles);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        setRoles(["employee"]);
         setLoading(false);
       });
+
     return () => {
       active = false;
     };

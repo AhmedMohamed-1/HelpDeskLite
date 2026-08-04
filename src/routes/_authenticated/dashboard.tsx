@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Search, Ticket as TicketIcon } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/firebase";
+import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore";
 import { useRoles, useSession } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,9 +55,9 @@ export function useProfiles() {
   return useQuery({
     queryKey: ["profiles"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("id, full_name, email");
-      if (error) throw error;
-      return data;
+      const q = query(collection(db, "users"), orderBy("fullName"));
+      const snap = await import("firebase/firestore").then(({ getDocs }) => getDocs(q));
+      return snap.docs.map((d) => ({ id: d.id, full_name: d.data().fullName, email: d.data().email }));
     },
   });
 }
@@ -69,17 +70,26 @@ function Dashboard() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const tickets = useQuery({
-    queryKey: ["tickets"],
-    enabled: !!user,
+    queryKey: ["tickets", staff, user?.id],
+    enabled: !!user && !rolesLoading,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tickets")
-        .select(
-          "id, ticket_number, title, status, priority, category, requester_id, assignee_id, created_at",
-        )
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data as TicketRow[];
+      const base = collection(db, "tickets");
+      const q = staff
+        ? query(base, orderBy("createdAt", "desc"))
+        : query(base, where("requesterId", "==", user!.id), orderBy("createdAt", "desc"));
+
+      const snap = await import("firebase/firestore").then(({ getDocs }) => getDocs(q));
+      return snap.docs.map((d) => ({
+        id: d.id,
+        ticket_number: d.data().ticketNumber,
+        title: d.data().title,
+        status: d.data().status,
+        priority: d.data().priority,
+        category: d.data().category,
+        requester_id: d.data().requesterId,
+        assignee_id: d.data().assigneeId ?? null,
+        created_at: d.data().createdAt,
+      })) as TicketRow[];
     },
   });
 
@@ -90,18 +100,19 @@ function Dashboard() {
   }, [profiles.data]);
 
   useEffect(() => {
-    if (!user) return;
-    const channel = supabase
-      .channel("tickets-list")
-      .on("postgres_changes", { event: "*", schema: "public", table: "tickets" }, () => {
-        tickets.refetch();
-      })
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+    if (!user || rolesLoading) return;
+
+    const base = collection(db, "tickets");
+    const q = staff
+      ? query(base, orderBy("createdAt", "desc"))
+      : query(base, where("requesterId", "==", user.id), orderBy("createdAt", "desc"));
+
+    const unsubscribe = onSnapshot(q, () => {
+      tickets.refetch();
+    });
+
+    return unsubscribe;
+  }, [user?.id, staff, rolesLoading, tickets]);
 
   const rows = (tickets.data ?? []).filter((t) => {
     const matchesSearch =

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, Inbox, Users } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getTickets, getUsers } from "@/lib/firebase";
 import { useRoles, useSession } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -49,19 +49,22 @@ function Insights() {
     queryKey: ["tickets-insights"],
     enabled: staff,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tickets")
-        .select("id, status, priority, assignee_id, created_at, resolved_at");
-      if (error) throw error;
-      return data as Row[];
+      const data = await getTickets();
+      return data.map((item) => ({
+        id: item.id,
+        status: item.status,
+        priority: item.priority,
+        assignee_id: item.assigneeId ?? null,
+        created_at: item.createdAt,
+        resolved_at: item.resolvedAt ?? null,
+      })) as Row[];
     },
   });
 
   const profiles = useQuery({
     queryKey: ["profiles"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("id, full_name, email");
-      if (error) throw error;
+      const data = await getUsers();
       return data;
     },
   });

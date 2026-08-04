@@ -1,64 +1,82 @@
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { LifeBuoy, LogOut } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { ROLE_LABEL } from "@/lib/tickets";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ROLE_LABELS, type Role, isStaff } from "@/lib/helpdesk";
-import { cn } from "@/lib/utils";
 
-export function AppHeader({ roles, email }: { roles: Role[]; email?: string }) {
+export function AppHeader() {
+  const { profile, signOut } = useAuth();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  const links = [
-    { to: "/dashboard", label: "Tickets" },
-    ...(isStaff(roles) ? [{ to: "/insights", label: "Insights" }] : []),
-    ...(roles.includes("manager") ? [{ to: "/team", label: "People" }] : []),
-  ];
-
-
-  async function signOut() {
-    await queryClient.cancelQueries();
-    queryClient.clear();
-    await supabase.auth.signOut();
-    navigate({ to: "/auth", replace: true });
-  }
-
-  const topRole: Role = roles.includes("manager")
-    ? "manager"
-    : roles.includes("support")
-      ? "support"
-      : "employee";
+  const navLink =
+    "relative rounded-full px-3.5 py-1.5 text-muted-foreground transition-all duration-300 hover:bg-secondary hover:text-foreground";
 
   return (
-    <header className="border-b border-border bg-card">
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4">
-        <Link to="/dashboard" className="flex items-center gap-2 font-semibold">
-          <LifeBuoy className="size-5 text-primary" />
-          HelpDesk Lite
+    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/70 backdrop-blur-xl">
+      <div className="mx-auto grid h-16 max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 sm:flex">
+        <Link to="/" className="group flex min-w-0 items-center gap-2.5">
+          <img
+            src="/HD.png"
+            alt="HelpDesk Lite"
+            className="size-14 shrink-0 rounded-xl object-contain transition-transform duration-500 group-hover:rotate-12"
+          />
+          <span className="truncate font-display text-sm font-bold tracking-tight">
+            HelpDesk Lite
+          </span>
         </Link>
-        <nav className="flex items-center gap-1">
-          {links.map((l) => (
-            <Link
-              key={l.to}
-              to={l.to}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary",
-                pathname.startsWith(l.to) && "bg-secondary text-foreground",
-              )}
-            >
-              {l.label}
+
+        {profile && (
+          <nav className="ml-2 hidden items-center gap-1 text-sm sm:flex">
+            <Link to="/tickets" className={navLink} activeProps={{ className: "bg-secondary text-foreground" }}>
+              Tickets
             </Link>
-          ))}
-        </nav>
-        <div className="ml-auto flex items-center gap-3">
-          <p className="hidden text-xs text-muted-foreground sm:block">{email}</p>
-          <Badge variant="secondary">{ROLE_LABELS[topRole]}</Badge>
-          <Button variant="ghost" size="icon" onClick={signOut} aria-label="Sign out">
-            <LogOut className="size-4" />
-          </Button>
+            {profile.role === "manager" && (
+              <>
+                <Link to="/insights" className={navLink} activeProps={{ className: "bg-secondary text-foreground" }}>
+                  Insights
+                </Link>
+                <Link to="/team" className={navLink} activeProps={{ className: "bg-secondary text-foreground" }}>
+                  Team
+                </Link>
+              </>
+            )}
+          </nav>
+        )}
+
+        <div className="ml-auto flex shrink-0 items-center gap-3">
+          {profile ? (
+            <>
+              <div className="hidden text-right leading-tight sm:block">
+                <div className="text-sm font-medium">{profile.name}</div>
+                <div className="text-xs text-muted-foreground">{ROLE_LABEL[profile.role]}</div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Sign out"
+                className="rounded-full hover-lift"
+                onClick={async () => {
+                  await signOut();
+                  navigate({ to: "/" });
+                }}
+              >
+                <LogOut className="size-4" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" className="rounded-full" asChild>
+                <Link to="/auth" search={{ mode: "signin" }}>
+                  Sign in
+                </Link>
+              </Button>
+              <Button size="sm" className="rounded-full hover-lift glow-ring" asChild>
+                <Link to="/auth" search={{ mode: "signup" }}>
+                  Sign up
+                </Link>
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </header>

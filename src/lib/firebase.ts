@@ -1,44 +1,58 @@
-import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import {
+  getAuth,
+  initializeAuth,
+  indexedDBLocalPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
+  browserPopupRedirectResolver,
+  type Auth,
+} from "firebase/auth";
+import { getDatabase, type Database } from "firebase/database";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+  apiKey: "AIzaSyA5ESqS2tkFch5YjiVkrAz9ZyUmoFQ98XM",
+  authDomain: "helpdesklite.firebaseapp.com",
+  databaseURL: "https://helpdesklite-default-rtdb.firebaseio.com",
+  projectId: "helpdesklite",
+  storageBucket: "helpdesklite.firebasestorage.app",
+  messagingSenderId: "596416121618",
+  appId: "1:596416121618:web:5300f72a1846ccaf3281cb",
+  measurementId: "G-56EL8KHQR2",
 };
 
-// Initialize Firebase App
-const app = initializeApp(firebaseConfig);
+let app: FirebaseApp | undefined;
+let authRef: Auth | undefined;
+let dbRef: Database | undefined;
 
-// Initialize Firebase Auth
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
+function getApplication() {
+  if (!app) app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  return app;
+}
 
-// Google Sign-In helper function
-export const signInWithGoogle = async () => {
-  try {
-    const result = await signInWithPopup(auth, googleProvider);
-    // User signed in successfully
-    return { user: result.user, error: null };
-  } catch (error: any) {
-    console.error("Firebase Google Sign-In Error:", error);
-    return { user: null, error };
+/** Client-only: call inside effects, handlers, or after hydration. */
+export function firebaseAuth() {
+  if (!authRef) {
+    const application = getApplication();
+    try {
+      // Mobile browsers partition storage; try IndexedDB first, then fall back
+      // so the session still survives the OAuth round-trip.
+      authRef = initializeAuth(application, {
+        persistence: [
+          indexedDBLocalPersistence,
+          browserLocalPersistence,
+          browserSessionPersistence,
+        ],
+        popupRedirectResolver: browserPopupRedirectResolver,
+      });
+    } catch {
+      authRef = getAuth(application);
+    }
   }
-};
+  return authRef;
+}
 
-// Sign-Out helper function
-export const logoutFirebase = async () => {
-  try {
-    await signOut(auth);
-    return { error: null };
-  } catch (error: any) {
-    console.error("Firebase Sign-Out Error:", error);
-    return { error };
-  }
-};
-
-export default app;
+export function firebaseDb() {
+  if (!dbRef) dbRef = getDatabase(getApplication());
+  return dbRef;
+}

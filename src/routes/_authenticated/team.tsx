@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/firebase";
+import { addDoc, collection, deleteDoc, doc, getDocs, query, setDoc, where } from "firebase/firestore";
 import { useRoles, useSession } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -53,27 +54,22 @@ function Team() {
     queryKey: ["team-people"],
     enabled: isManager,
     queryFn: async () => {
-      const [{ data: profiles, error: pErr }, { data: userRoles, error: rErr }] = await Promise.all([
-        supabase.from("profiles").select("id, full_name, email").order("full_name"),
-        supabase.from("user_roles").select("user_id, role"),
-      ]);
-      if (pErr) throw pErr;
-      if (rErr) throw rErr;
-      return (profiles ?? []).map((p) => ({
-        ...p,
-        roles: (userRoles ?? [])
-          .filter((r) => r.user_id === p.id)
-          .map((r) => r.role as Role),
+      const usersSnap = await getDocs(query(collection(db, "users")));
+      const users = usersSnap.docs.map((d) => ({
+        id: d.id,
+        full_name: d.data().fullName,
+        email: d.data().email,
+        roles: Array.isArray(d.data().roles) ? d.data().roles : ["employee"],
       }));
+      return users;
     },
   });
 
   const setRole = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: Role }) => {
-      const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", userId);
-      if (delErr) throw delErr;
-      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role });
-      if (error) throw error;
+      const ref = doc(db, "users", userId);
+      const nextRoles = role === "employee" ? ["employee"] : [role];
+      await setDoc(ref, { roles: nextRoles }, { merge: true });
     },
     onSuccess: (_d, v) => {
       toast.success(`Role updated to ${ROLE_LABELS[v.role]}`);

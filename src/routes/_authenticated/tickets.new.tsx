@@ -3,7 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { createTicket } from "@/lib/firebase";
 import { useSession } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,19 +63,22 @@ function NewTicket() {
     if (!user) return;
     setErrors({});
     setSaving(true);
-    const { data, error } = await supabase
-      .from("tickets")
-      .insert({ ...parsed.data, requester_id: user.id })
-      .select("id, ticket_number")
-      .single();
+    const ticketNumber = `HD-${Date.now().toString().slice(-5)}`;
+    const { id } = await createTicket({
+      ...parsed.data,
+      ticketNumber,
+      requesterId: user.id,
+      assigneeId: null,
+      resolutionNote: "",
+      resolvedAt: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: "new",
+    });
     setSaving(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
     queryClient.invalidateQueries({ queryKey: ["tickets"] });
-    toast.success(`Ticket ${data.ticket_number} created with status "New"`);
-    navigate({ to: "/tickets/$ticketId", params: { ticketId: data.id } });
+    toast.success(`Ticket ${ticketNumber} created with status "New"`);
+    navigate({ to: "/tickets/$ticketId", params: { ticketId: id } });
   }
 
   return (

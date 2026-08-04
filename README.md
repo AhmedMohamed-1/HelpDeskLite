@@ -1,122 +1,236 @@
-# HelpDesk Hub
+# Help Desk Hub
 
-Task 1: User Login As an employee, support staff, or manager,
-I want to log in to the HelpDesk Lite system,
-so that I can securely access the system based on my role.  Task 2: Define User Roles and Permissions 
+create a website called HelpDesk Lite HelpDesk Lite 
 
-Define the user roles for HelpDesk Lite and the permissions of each role.
+Sign in, Sign Up
 
-Roles:
+Internal support ticketing · v1
+
+One place for every internal support request.
+
+Employees submit requests with the information support actually needs. Support staff take ownership and move tickets through a clear workflow. Managers see open work, delays, and who is carrying the load.
+
+
+
+Get started
+
+Roles & permissions
 
 Employee
 
+View: only their own tickets
+
+Create: new support requests
+
+Update: nothing after submission
+
+Assign: no
+
+Resolve: no
+
 Support Staff
+
+View: all tickets and details
+
+Create: tickets (own or on behalf)
+
+Update: status, priority, notes
+
+Assign: to self or another support member
+
+Resolve: yes — resolve and close
 
 Manager
 
-The output should identify what each role can view, create, update, assign, and resolve.       Task 3: Employee Can Submit a Support Request 
+View: all tickets plus the insights dashboard
 
-As an employee,
-I want to submit a support request,
-so that the support team can review and resolve my issue. 
+Create: tickets
 
+Update: everything support staff can
 
+Assign: yes, including reassignment
 
-Employee can create a new support request.
+Resolve: yes, plus manage user roles
 
-Required fields must be completed.
+Ticket workflow
 
-The request is saved successfully.
-
-A unique ticket ID is generated.
-
-The ticket status is set to "New".
-
-Task 4: Support Staff Can View Submitted Tickets 
-
-As a support staff member,
-I want to view all submitted support tickets,
-so that I can review and handle incoming requests.
+Initial status New · working statuses Assigned, In Progress, On Hold · final status Closed (with Resolved as the pre-closure state).
 
 
 
+New
 
 
 
-
-Support staff can view a list of submitted tickets.
-
-Each ticket displays its ID, title, status, priority, and submitter.
-
-Support staff can open a ticket to view its details.
-
-Task 5: Support Staff Can Assign a Ticket 
-
-As a support staff member,
-I want to assign a ticket to myself or another support member,
-so that every ticket has a clear owner.
+Can move to: Assigned, In Progress, Closed
 
 
 
-A ticket can be assigned to a support staff member.
+Assigned
 
-The current assignee is displayed.
 
-The assignee can be changed when needed.
 
-Task 6: Define Ticket Workflow Statuses 
+Can move to: In Progress, On Hold, Closed
 
-The ticket lifecycle is not fully defined in the requirements.
 
-Determine:
 
-Initial status
+In Progress
 
-Working statuses
 
-Final status
 
-Allowed transitions between statuses
+Can move to: On Hold, Resolved, Closed
 
-This task must be completed before implementing ticket workflow. Task 7: Define Required Ticket Information 
 
-The required information for submitting a support request is not fully defined.
 
-Clarify:
+On Hold
 
-Required fields
 
-Optional fields
 
-Attachments
+Can move to: In Progress, Closed
 
-Categories
+
+
+Resolved
+
+
+
+Can move to: Closed, In Progress
+
+
+
+Closed
+
+
+
+Final state — no further transitions
+
+
+
+Required ticket information
+
+Title
+
+
+
+Required · short summary, 5–120 characters
+
+
+
+Description
+
+
+
+Required · what happened and what was tried
+
+
+
+Category
+
+
+
+Required · Hardware, Software, Network, Access, Facilities, Other
+
+
 
 Priority
 
-Task 8: Define Manager Dashboard Requirements 
 
-Manager visibility requirements are not fully defined.
 
-Clarify:
+Required · Low, Medium, High (drives the SLA)
 
-Required metrics
 
-Open tickets
 
-Delayed tickets
+Submitter & ticket ID
 
-Workload per support member
 
- Task 9: Support Staff Can Update Ticket Status As a support staff member,
-I want to update the status of a support request,
-so that employees can track the progress of their requests.             conect it with SupaBase
+
+Automatic · captured on submission
+
+
+
+Attachments
+
+
+
+Out of scope for v1 — links can be pasted in the description
+
+
+
+Manager visibility
+
+Open tickets by status
+
+Delayed tickets (past the priority SLA)
+
+Resolved and closed volume
+
+Open workload per support member
+
+Delay thresholds: High 8h, Medium 24h, Low 72h from submission while the ticket is still open.
+
+
+
+HelpDesk Lite — internal support ticketing workspace
+
+
+
+
+
+connect it with Firebase for database and auth with this configuration <script type="module">
+
+  // Import the functions you need from the SDKs you need
+
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js";
+
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-analytics.js";
+
+  // TODO: Add SDKs for Firebase products that you want to use
+
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+
+
+  // Your web app's Firebase configuration
+
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+
+  const firebaseConfig = {
+
+    apiKey: "AIzaSyA5ESqS2tkFch5YjiVkrAz9ZyUmoFQ98XM",
+
+    authDomain: "helpdesklite.firebaseapp.com",
+
+    databaseURL: "https://helpdesklite-default-rtdb.firebaseio.com",
+
+    projectId: "helpdesklite",
+
+    storageBucket: "helpdesklite.firebasestorage.app",
+
+    messagingSenderId: "596416121618",
+
+    appId: "1:596416121618:web:5300f72a1846ccaf3281cb",
+
+    measurementId: "G-56EL8KHQR2"
+
+  };
+
+
+
+  // Initialize Firebase
+
+  const app = initializeApp(firebaseConfig);
+
+  const analytics = getAnalytics(app);
+
+</script>
 
 This project was built with [Lovable](https://lovable.dev).
 
+**Live app**: https://helpdesklite.lovable.app
+
 ## Build with Lovable
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/a2d385ca-d9fd-4c35-86dd-6ab754e8dddd).
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/35db011f-bb68-44c9-9fc6-b13c2c679fba).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
 - **Stay in sync**: every change made in Lovable is committed straight to this repository.
