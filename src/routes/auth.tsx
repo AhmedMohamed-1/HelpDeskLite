@@ -4,6 +4,7 @@ import { LifeBuoy } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
+import { signInWithGoogle } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,11 +64,11 @@ function AuthPage() {
   }
 
   async function google() {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) return toast.error("Google sign-in failed");
-    if (result.redirected) return;
+    setBusy(true);
+    const { user, error } = await signInWithGoogle();
+    setBusy(false);
+    if (error) return toast.error(error.message || "Google sign-in failed");
+    toast.success(`Welcome, ${user?.displayName || user?.email}`);
     navigate({ to: "/dashboard" });
   }
 
